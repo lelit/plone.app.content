@@ -35,7 +35,16 @@ class ContentStatusModifyView(BrowserView):
     ):
         context = aq_inner(self.context)
         self.plone_utils = getToolByName(context, "plone_utils")
-        # First check if the main argument is given.
+        portal_workflow = getToolByName(context, "portal_workflow")
+        # First check if the main argument is given and is valid.
+        if workflow_action:
+            # Note: originally an invalid workflow action was silently accepted.
+            # Nothing really happened.  There could be a use case for this,
+            # but I think it is more common that the user wants to know.
+            transitions = portal_workflow.getTransitionsFor(context)
+            transition_ids = [t["id"] for t in transitions]
+            if workflow_action not in transition_ids:
+                workflow_action = None
         if not workflow_action:
             self.plone_utils.addPortalMessage(
                 _("You must select a publishing action."), "error"
@@ -45,16 +54,7 @@ class ContentStatusModifyView(BrowserView):
         # If a workflow action was specified, there must be a plone.protect authenticator.
         CheckAuthenticator(self.request)
 
-        # Check that the transition is valid.
-        portal_workflow = getToolByName(context, "portal_workflow")
-        transitions = portal_workflow.getTransitionsFor(context)
-        transition_ids = [t["id"] for t in transitions]
-
-        if (
-            workflow_action in transition_ids
-            and not effective_date
-            and context.EffectiveDate() == "None"
-        ):
+        if not effective_date and context.EffectiveDate() == "None":
             # TODO Check if effective date is really set
             effective_date = DateTime()
 
