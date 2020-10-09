@@ -54,9 +54,15 @@ class ContentStatusModifyView(BrowserView):
         # If a workflow action was specified, there must be a plone.protect authenticator.
         CheckAuthenticator(self.request)
 
-        if not effective_date and context.EffectiveDate() == "None":
-            # TODO Check if effective date is really set
-            effective_date = DateTime()
+        form = self.request.form
+        if not effective_date:
+            effective_date = form.get("form.widgets.effective_date") or effective_date
+            if not effective_date and context.EffectiveDate() == "None":
+                effective_date = DateTime()
+        if not expiration_date:
+            expiration_date = (
+                form.get("form.widgets.expiration_date") or expiration_date
+            )
 
         # You can transition content but not have the permission to ModifyPortalContent.
         contentEditSuccess = 0
@@ -116,7 +122,6 @@ class ContentStatusModifyView(BrowserView):
     def editContent(self, obj, effective, expiry):
         kwargs = {}
         # may contain the year
-        # TODO what about plain datetime?
         if effective and (isinstance(effective, DateTime) or len(effective) > 5):
             kwargs["effective_date"] = effective
         # may contain the year
